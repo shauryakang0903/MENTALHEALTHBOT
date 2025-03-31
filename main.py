@@ -32,7 +32,7 @@ ChatGroq.BaseCache = InMemoryCache
 ChatGroq.model_rebuild()
 
 base_dir = os.path.dirname(__file__)
-dataset_path = os.path.join(base_dir, "Data", "Dataset.csv")
+dataset_path = os.path.join(base_dir, "DATA", "Dataset.csv")
 dataset = pd.read_csv(dataset_path)
 
 @st.cache_resource
@@ -64,7 +64,7 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages([
 history_aware_chain = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
 
 system_prompt = (
-    "You are a caring and empathetic mental health assistant with the nurturing guidance of a parent. "
+    "As a compassionate and supportive mental health assistant, you provide guidance with the warmth and understanding of a caring mentor."
     "Use the following pieces of retrieved context to address the user's concern in a way that is both supportive and age-appropriate. "
     "If you are uncertain about the answer, kindly acknowledge it and suggest seeking further support from a trusted adult or professional. "
     "You also have language translation capabilities to assist users in different languages."
@@ -103,21 +103,22 @@ if user_input:
     st.write("Assistant:", response['answer'])
 
 
-# qrcode
-#from io import BytesIO
+import qrcode
+from io import BytesIO
 
-#deployed_url = "https://mentalhealthchatbot-meqxamf2gnxrybe3vqytkc.streamlit.app/"
+deployed_url = "https://mentalhealthbot-4ctgdhtdeeffjsswwkefw8.streamlit.app/"
 
-#qr = qrcode.QRCode(
- #   version=1,
- #   error_correction=qrcode.constants.ERROR_CORRECT_L,
-  #  box_size=10,
-   # border=4,
-#)
-#qr.add_data(deployed_url)
-#qr.make(fit=True)
-#img = qr.make_image(fill="black", back_color="white")
-#buffer = BytesIO()
-#img.save(buffer, format="PNG")
-#buffer.seek(0)
-#st.sidebar.image(buffer, caption="Scan this QR code to visit the Chatbot", use_column_width=True)"""
+qr = qrcode.QRCode(
+
+    version=1,
+    error_correction=qrcode.constants.ERROR_CORRECT_L,
+    box_size=10,
+    border=4,
+)
+qr.add_data(deployed_url)
+qr.make(fit=True)
+img = qr.make_image(fill="black", back_color="white")
+buffer = BytesIO()
+img.save(buffer, format="PNG")
+buffer.seek(0)
+st.sidebar.image(buffer, caption="Scan this QR code to visit the Chatbot", use_column_width=True)
