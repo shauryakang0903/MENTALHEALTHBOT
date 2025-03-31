@@ -1,9 +1,9 @@
 from __future__ import annotations  # Must be the first line
 
 import streamlit as st
-import pandas as pd
-import os
-from dotenv import load_dotenv
+
+st.title("🌟 Happiness Chatbot 🌟")  # Added heading
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,15 +17,15 @@ from langchain.vectorstores import FAISS
 from langchain_groq import ChatGroq
 from langchain_core.caches import InMemoryCache
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_chains.combine_documents import create_stuff_documents_chain
-from langchain_chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
-import qrcode
-from io import BytesIO
+import pandas as pd
+import os
+from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 hf_token = st.secrets.get("HUGGINGFACE_API_TOKEN", os.getenv("HUGGINGFACE_API_TOKEN"))
 groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
@@ -38,10 +38,6 @@ ChatGroq.model_rebuild()
 base_dir = os.path.dirname(__file__)
 dataset_path = os.path.join(base_dir, "DATA", "Dataset.csv")
 dataset = pd.read_csv(dataset_path)
-
-# Heading
-st.title("💙 **Happiness Chatbot** 💙")
-st.write("🌟 **A supportive chatbot for mental well-being.** 🌟")
 
 @st.cache_resource
 def load_model_and_vectorstore():
@@ -107,12 +103,21 @@ session_id = st.text_input("Session ID", value="default_session", key="session_i
 user_input = st.text_input("Your question:")
 if user_input:
     session_history = get_session_history(session_id)
-    response = conversational_rag_chain.invoke({"input": user_input}, config={"configurable": {"session_id": session_id}})
+    response = conversational_rag_chain.invoke({"input": user_input}, config = {"configurable": {"session_id":session_id}})
     st.write("Assistant:", response['answer'])
 
-# QR Code Generation
+
+import qrcode
+from io import BytesIO
+
 deployed_url = "https://mentalhealthbot-4ctgdhtdeeffjsswwkefw8.streamlit.app/"
-qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+
+qr = qrcode.QRCode(
+    version=1,
+    error_correction=qrcode.constants.ERROR_CORRECT_L,
+    box_size=10,
+    border=4,
+)
 qr.add_data(deployed_url)
 qr.make(fit=True)
 img = qr.make_image(fill="black", back_color="white")
