@@ -1,8 +1,9 @@
+from __future__ import annotations  # Must be the first line
+
 import streamlit as st
 
 st.title("🌟 Happiness Chatbot 🌟")  # Added heading
 
-from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
