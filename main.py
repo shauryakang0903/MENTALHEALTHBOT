@@ -1,9 +1,16 @@
 import streamlit as st
-import pandas as pd
-import os
-import qrcode
-from io import BytesIO
-from dotenv import load_dotenv
+
+st.title("🌟 Happiness Chatbot 🌟")  # Added heading
+
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler as Callbacks
+else:
+    class Callbacks:
+        pass
+
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain_groq import ChatGroq
@@ -14,36 +21,22 @@ from langchain.chains import create_history_aware_retriever, create_retrieval_ch
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
+import pandas as pd
+import os
+from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
-hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
-groq_api_key = os.getenv("GROQ_API_KEY")
+hf_token = st.secrets.get("HUGGINGFACE_API_TOKEN", os.getenv("HUGGINGFACE_API_TOKEN"))
+groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
 os.environ["HUGGINGFACE_API_TOKEN"] = hf_token
 os.environ["GROQ_API_KEY"] = groq_api_key
 
 ChatGroq.BaseCache = InMemoryCache
 ChatGroq.model_rebuild()
 
-# Load dataset
 base_dir = os.path.dirname(__file__)
 dataset_path = os.path.join(base_dir, "DATA", "Dataset.csv")
 dataset = pd.read_csv(dataset_path)
-
-# Streamlit UI Enhancements
-st.set_page_config(page_title="Happiness Chatbot", page_icon="😊", layout="centered")
-st.markdown("""
-    <style>
-        body {background-color: #f8f9fa; color: #333;}
-        .success-box {background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px;}
-        .error-box {background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px;}
-        .chatbot-title {font-size: 36px; font-weight: bold; text-align: center; color: #333;}
-        .chatbot-description {font-size: 18px; text-align: center; color: #666;}
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown("<h1 class='chatbot-title'>😊 Happiness Chatbot</h1>", unsafe_allow_html=True)
-st.markdown("<p class='chatbot-description'>Welcome to the Happiness Chatbot! 🌟 Ask any question, and our chatbot will provide compassionate and insightful responses to improve mental well-being.</p>", unsafe_allow_html=True)
 
 @st.cache_resource
 def load_model_and_vectorstore():
@@ -55,20 +48,35 @@ def load_model_and_vectorstore():
     retriever = vectorstore.as_retriever()
     return llm, retriever
 
-with st.spinner('⏳ Building the FAISS vectorstore. Please wait...'):
+with st.spinner('Building the FAISS vectorstore. Please wait...'):
     llm, retriever = load_model_and_vectorstore()
-st.markdown("<div class='success-box'>✅ Vectorstore built successfully!</div>", unsafe_allow_html=True)
+st.success("Vectorstore built successfully!")
 
-# Chat System Prompts
+contextualize_q_system_prompt = (
+    "Given a chat history and the latest user input, which may reference previous context, "
+    "rephrase the user's question into a clear, standalone query using gentle and simple language suitable for children. "
+    "Provide some advice and try to give answers in a caring, parental tone."
+)
+
 contextualize_q_prompt = ChatPromptTemplate.from_messages([
-    ("system", "Rephrase the user's query clearly using simple language."),
+    ("system", contextualize_q_system_prompt),
     MessagesPlaceholder("chat_history"),
     ("human", "{input}")
 ])
 
 history_aware_chain = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
+
+system_prompt = (
+    "As a compassionate and supportive mental health assistant, you provide guidance with the warmth and understanding of a caring mentor."
+    "Use the following pieces of retrieved context to address the user's concern in a way that is both supportive and age-appropriate. "
+    "If you are uncertain about the answer, kindly acknowledge it and suggest seeking further support from a trusted adult or professional. "
+    "You also have language translation capabilities to assist users in different languages."
+    "\n\n"
+    "{context}"
+)
+
 qa_prompt = ChatPromptTemplate.from_messages([
-    ("system", "Provide supportive, warm, and age-appropriate responses."),
+    ("system", system_prompt),
     MessagesPlaceholder("chat_history"),
     ("user", "{input}")
 ])
@@ -94,16 +102,21 @@ session_id = st.text_input("Session ID", value="default_session", key="session_i
 user_input = st.text_input("Your question:")
 if user_input:
     session_history = get_session_history(session_id)
-    try:
-        response = conversational_rag_chain.invoke({"input": user_input}, config={"configurable": {"session_id": session_id}})
-        st.write("### Assistant:", response['answer'])
-    except Exception as e:
-        st.markdown(f"<div class='error-box'>⚠️ Error: {str(e)}</div>", unsafe_allow_html=True)
+    response = conversational_rag_chain.invoke({"input": user_input}, config = {"configurable": {"session_id":session_id}})
+    st.write("Assistant:", response['answer'])
 
-# QR Code Generation for Deployment
-st.sidebar.header("📱 Access the Chatbot")
+
+import qrcode
+from io import BytesIO
+
 deployed_url = "https://mentalhealthbot-4ctgdhtdeeffjsswwkefw8.streamlit.app/"
-qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+
+qr = qrcode.QRCode(
+    version=1,
+    error_correction=qrcode.constants.ERROR_CORRECT_L,
+    box_size=10,
+    border=4,
+)
 qr.add_data(deployed_url)
 qr.make(fit=True)
 img = qr.make_image(fill="black", back_color="white")
